@@ -1,0 +1,93 @@
+<div *ngIf="errormessage.message" class="alert alert-{{errormessage.class}} alert-dismissible" role="alert">
+    <button *ngIf="errormessage.class === 'danger'" type="button" class="close" data-dismiss="alert" aria-label="Close" (click)="clearError()">
+      <span aria-hidden="true">×</span>
+    </button>
+    <i class="fa fa-check-circle"></i> {{ errormessage.message }}
+</div>
+<!--// Show SurveyForm Titles-->
+
+<div style="margin-top: 20px" *ngIf="!activeSurvey">
+    <pre>Pick a Survey to Conduct:</pre>
+    <pre style="width: 50%" *ngIf="!surveys">  Loading Surveys...  </pre>
+    <pre *ngFor="let survey of surveys"
+         style="width: 50%; cursor: pointer"
+         (click)="renderSurvey(survey)"> {{survey.survey_title}} </pre>
+</div>
+
+
+<!--// Render Active SurveyForm-->
+<ng-container *ngIf="activeSurvey">
+    <h3>{{activeSurvey.survey_title}}</h3>
+    <form novalidate
+          [formGroup]="surveyResponseForm"
+          (ngSubmit)="save(surveyResponseForm.value, surveyResponseForm.valid)">
+
+        <div formArrayName="responses"
+             class="panel panel-info"
+             *ngFor="let question of surveyResponseForm.controls.responses?.controls; let i = index">
+            <ng-container [formGroupName]="i" *ngIf="activeSurvey">
+                <div class="panel-body">
+                    <h4 class='control-label'>{{activeSurvey.questions[i].question_data}}</h4>
+                    <!--{{debugLog(question)}}-->
+                    <div *ngFor="let option of activeSurvey.questions[i].options">
+                        <label class='control-label'>
+                            <input id="{{'option' + option.option_no}}"
+                                   (click)="debugLog(option.option_no)"
+                                   formControlName="option_no"
+                                   type="radio"
+                                   [value]="option.option_no"> &nbsp; {{option.option_data}}
+                        </label>
+                    </div>
+
+                    <!--<label class='control-label'>Options:-->
+                        <!--<select required formControlName="option_no" class="form-control" style="width: 100%">-->
+                            <!--<option *ngFor="let option of activeSurvey.questions[i].options"-->
+                                    <!--[value]="option.option_no" class="form-control">-->
+                                <!--{{option.option_data}}-->
+                            <!--</option>-->
+
+                            <!--<option hidden value="" disabled selected>Select a response from the options </option>-->
+                        <!--</select>-->
+                    <!--</label>-->
+                </div>
+            </ng-container>
+        </div>
+
+        <div class="row">
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary" [disabled]=!surveyResponseForm.valid||submitted>
+                    Submit
+                </button>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-warning"
+                        (click)="submitted=false; renderSurvey(activeSurvey); errormessage.message=null">
+                    Clear
+                </button>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-danger" (click)="submitted=false; activeSurvey=null">
+                    Cancel
+                </button>
+            </div>
+            <div class="col-md-9"></div>
+        </div>
+
+        <div class="margin-20" *ngIf="debug" style="width:80%">
+            <br>
+            <br>
+            <div>surveyResponseForm details:-</div>
+            <pre *ngIf="submitted">submitResponse: <br>{{submitResponse | json}}</pre>
+            <!--<pre>submitResponse: <br>{{submitResponse | json}}</pre>-->
+            <pre>Is surveyResponseForm valid?: <br>{{surveyResponseForm.valid | json}}</pre>
+            <pre>Is surveyResponseForm submitted?: <br>{{submitted | json}}</pre>
+            <pre>surveyResponseForm value: <br>{{surveyResponseForm.value | json}}</pre>
+            <div class="margin-20">
+                Form changes:
+            </div>
+            <div *ngFor="let event of events" class="margin-20">
+                <pre> {{ event | json }} </pre>
+            </div>
+        </div>
+    </form>
+</ng-container>

@@ -1,0 +1,179 @@
+---
+swagger: "2.0"
+info:
+  description: "This is the internal API for 'Serverless SurveyForm App'."
+  version: "0.1"
+  title: "SSA"
+  termsOfService: "https://www.capgemini.com"
+  contact:
+    email: "ajay.t.kumar@capgemini.com"
+  license:
+    name: "Capgemini 2018"
+    url: "https://www.capgemini.com"
+host: "4tmo1tdjz2.execute-api.us-east-1.amazonaws.com"
+basePath: "/dev"
+tags:
+- name: "ssa"
+schemes:
+- "https"
+paths:
+  /surveyform:
+    get:
+      tags:
+      - "ssa"
+      operationId: "getSurvey"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "survey_id"
+        in: "query"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "200 response"
+          schema:
+            type: array
+            items:
+                $ref: "#/definitions/SurveyForm"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+      security:
+      - Cognito_Custom_Authorizer: []
+
+    post:
+      tags:
+      - "ssa"
+      operationId: "addSurvey"
+      consumes:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "SurveyForm"
+        required: true
+        schema:
+          $ref: "#/definitions/SurveyForm"
+      responses:
+        200:
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        400:
+          description: "400 response"
+      security:
+      - Cognito_Custom_Authorizer: []
+
+  /surveyresponse:
+    get:
+      tags:
+      - "ssa"
+      operationId: "getSurveyResponse"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "survey_id"
+        in: "query"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "200 response"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SurveyResponse'
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+      security:
+      - Cognito_Custom_Authorizer: []
+
+    post:
+      tags:
+      - "ssa"
+      operationId: "respondSurvey"
+      consumes:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "SurveyResponse"
+        required: true
+        schema:
+          $ref: "#/definitions/SurveyResponse"
+      responses:
+        200:
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        400:
+          description: "400 response"
+      security:
+      - Cognito_Custom_Authorizer: []
+
+securityDefinitions:
+  Cognito_Custom_Authorizer:
+    type: "apiKey"
+    name: "Authorization"
+    in: "header"
+
+definitions:
+  SurveyForm:
+    type: "object"
+    required:
+    - "questions"
+    - "survey_title"
+    properties:
+      survey_id:
+        type: "string"
+      survey_title:
+        type: "string"
+      questions:
+        type: "array"
+        items:
+          $ref: "#/definitions/Question"
+
+  Answer:
+    type: "object"
+    properties:
+      question_no:
+        type: "string"
+      option_no:
+        type: "string"
+
+  SurveyResponse:
+    type: "object"
+    required:
+    - "responses"
+    - "survey_id"
+    properties:
+      response_id:
+        type: "string"
+      survey_id:
+        type: "string"
+      responses:
+        type: "array"
+        items:
+          $ref: "#/definitions/Answer"
+
+  Question:
+    type: "object"
+    properties:
+      question_no:
+        type: "string"
+      question_data:
+        type: "string"
+      options:
+        type: "array"
+        items:
+          $ref: "#/definitions/Option"
+
+  Option:
+    type: "object"
+    properties:
+      option_no:
+        type: "string"
+      option_data:
+        type: "string"

@@ -1,0 +1,147 @@
+variables:
+  S3_BUCKET_NAME_PROD: 'serverlesscos2'
+  S3_BUCKET_NAME_DEV: 'dev-s3-ssa'
+  LAMBDA_FUNCTION_NAME_DEV: 'cos2-ssa-dev'
+  LAMBDA_FUNCTION_NAME_PROD: 'cos2-ssa-master'
+  REGION: 'us-east-1'
+  API_GATEWAY_ID: '4tmo1tdjz2'
+
+image: node:alpine
+
+stages:
+  - test
+  - build
+  - deploy
+
+cache: {}
+
+frontend_test:
+  stage: test
+  script:
+    - apk add --no-cache --update chromium && export CHROME_BIN=/usr/bin/chromium-browser
+    - npm install
+    - npm run-script test -- --watch=false --browsers=ChromeHeadlessCustom --source-map=false
+  only:
+    changes:
+      - src/**/*
+      - .gitlab-ci.yml
+
+frontend_build:
+  stage: build
+  dependencies:
+    - frontend_test
+  script:
+    - npm install
+    - if [ $CI_BUILD_REF_NAME == "master" ]; then find src/api/api -type f -exec sed -i -e "s/dev/master/g" {} +; fi
+    - npm run-script build -- --prod --source-map=false && ls -la dist
+  artifacts:
+    paths:
+      - dist
+  only:
+    changes:
+      - src/**/*
+      - .gitlab-ci.yml
+
+frontend_deploy_review:
+  stage: deploy
+  image: python:alpine
+  dependencies:
+    - frontend_build
+    - frontend_test
+  script:
+    - ls -la
+    - pip3 install awscli
+    - aws s3 rm  s3://$S3_BUCKET_NAME_DEV --recursive
+    - aws s3 cp ./dist/* s3://$S3_BUCKET_NAME_DEV/ --recursive --acl public-read
+  environment:
+    name: dev
+    url: http://$S3_BUCKET_NAME_DEV.s3-website-us-east-1.amazonaws.com
+  only:
+    changes:
+      - src/**/*
+      - .gitlab-ci.yml
+  except:
+    refs:
+      - master
+
+frontend_deploy_master:
+  stage: deploy
+  image: python:alpine
+  dependencies:
+    - frontend_build
+    - frontend_test
+  script:
+    - ls -la
+    - pip3 install awscli
+    - aws s3 rm  s3://$S3_BUCKET_NAME_PROD --recursive
+    - aws s3 cp ./dist/* s3://$S3_BUCKET_NAME_PROD/ --recursive --acl public-read
+  environment:
+    name: master
+    url: http://$S3_BUCKET_NAME_PROD.s3-website-us-east-1.amazonaws.com
+  only:
+    changes:
+      - src/**/*
+      - .gitlab-ci.yml
+    refs:
+      - master
+
+backend_lambda_dev:
+  stage: deploy
+  image: python:alpine
+  script:
+    - apk add --update zip
+    - pip3 install awscli
+    - zip backend.zip backend/lambda_function.py -j
+    - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME_DEV --zip-file fileb://backend.zip --region us-east-1
+  only:
+    changes:
+      - backend/lambda_function.py
+      - .gitlab-ci.yml
+  except:
+    refs:
+      - master
+
+backend_lambda_master:
+  stage: deploy
+  image: python:alpine
+  script:
+    - apk add --update zip
+    - pip3 install awscli
+    - zip backend.zip backend/lambda_function.py -j
+    - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME_PROD --zip-file fileb://backend.zip --region us-east-1
+  only:
+    changes:
+      - backend/lambda_function.py
+      - .gitlab-ci.yml
+    refs:
+      - master
+
+#api_review:
+#  stage: deploy
+#  image: python:alpine
+#  script:
+#    - pip3 install awscli
+#    - ls -la && pwd
+#    - aws apigateway put-rest-api --rest-api-id $API_GATEWAY_ID --mode overwrite --body file:///builds/serverless/ssa/ssa-api.yaml --region $REGION
+#    - aws apigateway create-deployment --rest-api-id $API_GATEWAY_ID --region $REGION --stage-name dev --stage-description 'Development Stage'
+#  only:
+#    changes:
+#      - ssa-api.yaml
+#      - .gitlab-ci.yml
+#  except:
+#    refs:
+#      - master
+#
+#api_master:
+#  stage: deploy
+#  image: python:alpine
+#  script:
+#    - pip3 install awscli
+#    - aws apigateway put-rest-api --rest-api-id $API_GATEWAY_ID --mode overwrite --body file:///builds/serverless/ssa/ssa-api.yaml --region $REGION
+#    - aws apigateway create-deployment --rest-api-id $API_GATEWAY_ID --region $REGION --stage-name master --stage-description 'master Stage'
+#  only:
+#    changes:
+#      - ssa-api.yaml
+#      - .gitlab-ci.yml
+#    refs:
+#      - master

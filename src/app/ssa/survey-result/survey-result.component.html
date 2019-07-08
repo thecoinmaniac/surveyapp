@@ -1,0 +1,30 @@
+<div *ngIf="errormessage.message" class="alert alert-{{errormessage.class}} alert-dismissible" role="alert">
+    <button *ngIf="errormessage.class === 'danger'" type="button" class="close" data-dismiss="alert" aria-label="Close" (click)="clearError()">
+      <span aria-hidden="true">×</span>
+    </button>
+    <i class="fa fa-check-circle"></i> {{ errormessage.message }}
+</div>
+<!--// Show SurveyForm Titles-->
+
+<div style="margin-top: 20px" *ngIf="!activeSurvey">
+    <pre>Pick a Survey to view Results:</pre>
+    <pre style="width: 50%" *ngIf="!surveys">  Loading Surveys...  </pre>
+    <pre *ngFor="let survey of surveys"
+         style="width: 50%; cursor: pointer"
+         (click)="showResults(survey)"> {{survey.survey_title}} </pre>
+</div>
+
+<ng-container *ngIf="activeSurvey">
+    <div *ngIf="!debug">
+        <div class="row">
+            <div class="col-md-6" *ngFor="let question of activeSurvey.questions">
+                <div [id]="question.question_no" style="height: 50%; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div *ngIf="debug" class="margin-20">
+        <pre>{{activeSurvey | json}}</pre>
+        <pre>{{surveyResponses | json}}</pre>
+    </div>
+</ng-container>
